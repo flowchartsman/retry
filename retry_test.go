@@ -84,11 +84,11 @@ func TestDoWithContextExitsEarlyWhenContextCanceled(t *testing.T) {
 	}
 }
 
-func TestCeaseStopsImmediately(t *testing.T) {
+func TestStopStopsImmediately(t *testing.T) {
 	tries := 0
 	err := Do(ConstantBackoff(5, 50*time.Millisecond), func() error {
 		tries++
-		return Cease(errTest)
+		return Stop(errTest)
 	})
 
 	if tries != 1 {
@@ -108,7 +108,7 @@ func ExampleDo() {
 		case resp.StatusCode == 0 || resp.StatusCode >= 500:
 			return fmt.Errorf("Retryable HTTP status: %s", http.StatusText(resp.StatusCode))
 		case resp.StatusCode != 200:
-			return Cease(fmt.Errorf("Non-retryable HTTP status: %s", http.StatusText(resp.StatusCode)))
+			return Stop(fmt.Errorf("Non-retryable HTTP status: %s", http.StatusText(resp.StatusCode)))
 		}
 		return nil
 	})
@@ -122,11 +122,14 @@ func ExampleDoWithContext_output() {
 		req, _ := http.NewRequest("GET", "http://golang.org/notfastenough", nil)
 		req = req.WithContext(ctx)
 		resp, err := http.DefaultClient.Do(req)
-		cancel()
-		if err == nil {
-			fmt.Println(resp.StatusCode)
+		if err != nil {
+			return err
 		}
-		return err
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("OMG AWFUL CODE %d", resp.StatusCode)
+			// or decide not to retry
+		}
+		return nil
 	})
 	fmt.Println(err)
 	// Output: Get http://golang.org/notfastenough: context deadline exceeded

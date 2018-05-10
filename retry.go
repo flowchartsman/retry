@@ -86,9 +86,9 @@ func ExponentialBackoff(maxAttempts int, initialDelay time.Duration, maxDelay ti
 	}
 }
 
-// Cease signals retry that the error returned is not one we wish to retry, and
+// Stop signals retry that the error returned is not one we wish to retry, and
 // the retrier will immediately stop
-func Cease(err error) FinalError {
+func Stop(err error) FinalError {
 	return FinalError{err}
 }
 
