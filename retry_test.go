@@ -63,7 +63,7 @@ func TestDoWithContextExitsEarlyWhenContextCanceled(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		err = DoWithContext(ctx, ConstantBackoff(10, 100*time.Millisecond), func(ctx context.Context) error {
+		err = DoWithContext(ctx, ConstantBackoff(100, 100*time.Millisecond), func(ctx context.Context) error {
 			tries++
 			return errTest
 		})
@@ -76,7 +76,7 @@ func TestDoWithContextExitsEarlyWhenContextCanceled(t *testing.T) {
 	if tries < 1 {
 		t.Errorf("expected at least one retry, got %d", tries)
 	}
-	if tries >= 9 {
+	if tries >= 100 {
 		t.Error("reached MaxTries, but should not have")
 	}
 	if err != errTest {
@@ -99,10 +99,11 @@ func ExampleDo() {
 }
 
 func ExampleDoWithContext_output() {
-	err := DoWithContext(context.Background(), ConstantBackoff(5, 100*time.Millisecond), func(ctx context.Context) error {
-		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	err := DoWithContext(ctx, ConstantBackoff(5, 100*time.Millisecond), func(ctx context.Context) error {
 		req, _ := http.NewRequest("GET", "http://golang.org/notfastenough", nil)
-		req = req.WithContext(timeoutCtx)
+		req = req.WithContext(ctx)
 		resp, err := http.DefaultClient.Do(req)
 		cancel()
 		if err == nil {

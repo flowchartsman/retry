@@ -4,6 +4,7 @@
 
 ## Usage
 
+### Simple
 ```go
 err := retry.Do(retry.ExponentialBackoff(5, 100*time.Millisecond, 1*time.Second), func() error {
 	resp, err := http.Get("http://golang.org")
@@ -17,17 +18,19 @@ err := retry.Do(retry.ExponentialBackoff(5, 100*time.Millisecond, 1*time.Second)
 })
 ```
 
+### With context
 ```go
-err := retry.DoWithContext(context.Background(), retry.ConstantBackoff(5, 100*time.Millisecond), func(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
-	req, _ := http.NewRequest("GET", "http://golang.org/notfastenough", nil)
-	req = req.WithContext(timeoutCtx)
-	resp, err := http.DefaultClient.Do(req)
-	cancel()
-	if err == nil {
-		fmt.Println(resp.StatusCode)
-	}
-	return err
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+defer cancel()
+err := DoWithContext(ctx, ConstantBackoff(5, 100*time.Millisecond), func(ctx context.Context) error {
+    req, _ := http.NewRequest("GET", "http://golang.org/notfastenough", nil)
+    req = req.WithContext(ctx)
+    resp, err := http.DefaultClient.Do(req)
+    cancel()
+    if err == nil {
+        fmt.Println(resp.StatusCode)
+    }
+    return err
 })
 ```
 
