@@ -5,7 +5,7 @@
 ## Usage
 
 ```go
-err := Do(ExponentialBackoff(5, 100*time.Millisecond, 1*time.Second), func() error {
+err := retry.Do(retry.ExponentialBackoff(5, 100*time.Millisecond, 1*time.Second), func() error {
 	resp, err := http.Get("http://golang.org")
 	switch {
 	case err != nil:
@@ -18,7 +18,7 @@ err := Do(ExponentialBackoff(5, 100*time.Millisecond, 1*time.Second), func() err
 ```
 
 ```go
-err := DoWithContext(context.Background(), ConstantBackoff(5, 100*time.Millisecond), func(ctx context.Context) error {
+err := retry.DoWithContext(context.Background(), retry.ConstantBackoff(5, 100*time.Millisecond), func(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
 	req, _ := http.NewRequest("GET", "http://golang.org/notfastenough", nil)
 	req = req.WithContext(timeoutCtx)
