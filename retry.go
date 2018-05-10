@@ -6,6 +6,14 @@ import (
 	"time"
 )
 
+type unRetryableError struct {
+	e error
+}
+
+func (u unRetryableError) Error() string {
+	return u.e.Error()
+}
+
 // Do runs a function until the BackoffStrategy is exhausted or the function
 // returns nil
 func Do(backoff BackoffStrategy, funcToRetry func() error) (err error) {
@@ -13,6 +21,10 @@ func Do(backoff BackoffStrategy, funcToRetry func() error) (err error) {
 		err := funcToRetry()
 		if err == nil {
 			return nil
+		}
+		switch v := err.(type) {
+		case unRetryableError:
+			return v.e
 		}
 		nextDuration, toContinue := backoff()
 		if !toContinue {
@@ -31,6 +43,10 @@ func DoWithContext(ctx context.Context, backoff BackoffStrategy, funcToRetry fun
 		err := funcToRetry(ctx)
 		if err == nil {
 			return nil
+		}
+		switch v := err.(type) {
+		case unRetryableError:
+			return v.e
 		}
 		nextDuration, toContinue := backoff()
 		if !toContinue {
@@ -76,6 +92,12 @@ func ExponentialBackoff(maxAttempts int, initialDelay time.Duration, maxDelay ti
 			time.Duration(rand.Int63n((1 << uint((attempts - 1)) * int64(initialDelay)))),
 		), attempts < maxAttempts-1
 	}
+}
+
+// Cease signals retry that the error returned is not one we wish to retry, and
+// the retrier will immediately stop
+func Cease(err error) unRetryableError {
+	return unRetryableError{err}
 }
 
 func min(a, b time.Duration) time.Duration {

@@ -84,14 +84,31 @@ func TestDoWithContextExitsEarlyWhenContextCanceled(t *testing.T) {
 	}
 }
 
+func TestCeaseStopsImmediately(t *testing.T) {
+	tries := 0
+	err := Do(ConstantBackoff(5, 50*time.Millisecond), func() error {
+		tries++
+		return Cease(errTest)
+	})
+
+	if tries != 1 {
+		t.Errorf("expected 1 tries, got %d", tries)
+	}
+	if err != errTest {
+		t.Errorf("err should equal errTest, got: %v", err)
+	}
+}
+
 func ExampleDo() {
 	err := Do(ExponentialBackoff(5, 100*time.Millisecond, 1*time.Second), func() error {
 		resp, err := http.Get("http://golang.org")
 		switch {
 		case err != nil:
 			return err
-		case resp.StatusCode != http.StatusOK:
-			return fmt.Errorf("HTTP status: %s", http.StatusText(resp.StatusCode))
+		case resp.StatusCode == 0 || resp.StatusCode >= 500:
+			return fmt.Errorf("Retryable HTTP status: %s", http.StatusText(resp.StatusCode))
+		case resp.StatusCode != 200:
+			return Cease(fmt.Errorf("Non-retryable HTTP status: %s", http.StatusText(resp.StatusCode)))
 		}
 		return nil
 	})
