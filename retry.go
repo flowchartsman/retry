@@ -6,14 +6,6 @@ import (
 	"time"
 )
 
-type unRetryableError struct {
-	e error
-}
-
-func (u unRetryableError) Error() string {
-	return u.e.Error()
-}
-
 // Do runs a function until the BackoffStrategy is exhausted or the function
 // returns nil
 func Do(backoff BackoffStrategy, funcToRetry func() error) (err error) {
@@ -23,7 +15,7 @@ func Do(backoff BackoffStrategy, funcToRetry func() error) (err error) {
 			return nil
 		}
 		switch v := err.(type) {
-		case unRetryableError:
+		case FinalError:
 			return v.e
 		}
 		nextDuration, toContinue := backoff()
@@ -45,7 +37,7 @@ func DoWithContext(ctx context.Context, backoff BackoffStrategy, funcToRetry fun
 			return nil
 		}
 		switch v := err.(type) {
-		case unRetryableError:
+		case FinalError:
 			return v.e
 		}
 		nextDuration, toContinue := backoff()
@@ -96,8 +88,8 @@ func ExponentialBackoff(maxAttempts int, initialDelay time.Duration, maxDelay ti
 
 // Cease signals retry that the error returned is not one we wish to retry, and
 // the retrier will immediately stop
-func Cease(err error) unRetryableError {
-	return unRetryableError{err}
+func Cease(err error) FinalError {
+	return FinalError{err}
 }
 
 func min(a, b time.Duration) time.Duration {
@@ -109,4 +101,16 @@ func min(a, b time.Duration) time.Duration {
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+}
+
+// FinalError represents and error that we don't wish to retry from. If the
+// wrapped function emits one of these, it will cease retrying, but will return
+// the original error.
+type FinalError struct {
+	e error
+}
+
+// Error implements error
+func (f FinalError) Error() string {
+	return f.e.Error()
 }
