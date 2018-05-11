@@ -3,6 +3,7 @@ package retry
 import (
 	"context"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -81,7 +82,7 @@ func ExponentialBackoff(maxAttempts int, initialDelay time.Duration, maxDelay ti
 		attempts++
 		return min(
 			maxDelay,
-			time.Duration(rand.Int63n((1 << uint((attempts - 1)) * int64(initialDelay)))),
+			time.Duration(randInt63n((1 << uint((attempts - 1)) * int64(initialDelay)))),
 		), attempts < maxAttempts-1
 	}
 }
@@ -113,4 +114,15 @@ type FinalError struct {
 // Error implements error
 func (f FinalError) Error() string {
 	return f.e.Error()
+}
+
+var (
+	randSource = rand.New(rand.NewSource(time.Now().UnixNano()))
+	randMux    sync.Mutex
+)
+
+func randInt63n(i int64) int64 {
+	randMux.Lock()
+	defer randMux.Unlock()
+	return randSource.Int63n(i)
 }
