@@ -9,9 +9,9 @@ import (
 
 // Default backoff
 const (
-	DefaultMaxTries        = 5
-	DefaultlInitialDelayMS = 200
-	DefaultMaxDelayMS      = 1000
+	DefaultMaxTries       = 5
+	DefaultInitialDelayMS = 200
+	DefaultMaxDelayMS     = 1000
 )
 
 // Retrier retries code blocks with or without context using an exponential
@@ -30,7 +30,7 @@ func NewRetrier(maxTries, initialDelay, maxDelay int) *Retrier {
 		maxTries = DefaultMaxTries
 	}
 	if initialDelay <= 0 {
-		initialDelay = DefaultlInitialDelayMS
+		initialDelay = DefaultInitialDelayMS
 	}
 	if maxDelay <= 0 {
 		maxDelay = DefaultMaxDelayMS
