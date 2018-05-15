@@ -172,6 +172,14 @@ func TestRetrierGetsDefaultsIfLessThanZero(t *testing.T) {
 	}
 }
 
+func TestFatalErrorImplementsError(t *testing.T) {
+	testError := fmt.Errorf("EG 8=D")
+	fatalError := Stop(testError)
+	if fatalError.Error() != testError.Error() {
+		t.Errorf("expected fatalError.Error() to be %s, got %s", testError.Error(), fatalError.Error())
+	}
+}
+
 func ExampleRetrier_Run() {
 	retrier := NewRetrier(5, 50, 50)
 	err := retrier.Run(func() error {
