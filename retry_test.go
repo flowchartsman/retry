@@ -15,46 +15,88 @@ var (
 )
 
 func TestBackoffBacksOff(t *testing.T) {
-	tries := 0
-	start := time.Now()
-	var last time.Time
-	retrier := NewRetrier(5, 50, 50)
-	err := retrier.Run(func() error {
-		tries++
-		last = time.Now()
-		return errTest
-	})
+	t.Run("r.Run", func(t *testing.T) {
+		tries := 0
+		start := time.Now()
+		var last time.Time
+		retrier := NewRetrier(5, 50, 50)
+		err := retrier.Run(func() error {
+			tries++
+			last = time.Now()
+			return errTest
+		})
 
-	if tries != 5 {
-		t.Errorf("expected 5 tries, got %d", tries)
-	}
-	if err != errTest {
-		t.Errorf("err should equal errTest, got: %v", err)
-	}
-	if last.Sub(start) > 250*time.Millisecond {
-		t.Errorf("should have taken less than 250 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
-	}
+		if tries != 5 {
+			t.Errorf("expected 5 tries, got %d", tries)
+		}
+		if err != errTest {
+			t.Errorf("err should equal errTest, got: %v", err)
+		}
+		if last.Sub(start) > 250*time.Millisecond {
+			t.Errorf("should have taken less than 250 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
+		}
+	})
+	t.Run("r.RunContext", func(t *testing.T) {
+		tries := 0
+		start := time.Now()
+		var last time.Time
+		retrier := NewRetrier(5, 50, 50)
+		err := retrier.RunContext(context.Background(), func(ctx context.Context) error {
+			tries++
+			last = time.Now()
+			return errTest
+		})
+
+		if tries != 5 {
+			t.Errorf("expected 5 tries, got %d", tries)
+		}
+		if err != errTest {
+			t.Errorf("err should equal errTest, got: %v", err)
+		}
+		if last.Sub(start) > 250*time.Millisecond {
+			t.Errorf("should have taken less than 250 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
+		}
+	})
 }
 
 func TestEventualSuccessSucceedsTransparently(t *testing.T) {
-	tries := 0
-	retrier := NewRetrier(5, 50, 50)
-	err := retrier.Run(func() error {
-		tries++
-		if tries == 2 {
-			return nil
+	t.Run("r.Run", func(t *testing.T) {
+		tries := 0
+		retrier := NewRetrier(5, 50, 50)
+		err := retrier.Run(func() error {
+			tries++
+			if tries == 2 {
+				return nil
+			}
+			return errTest
+		})
+		if tries != 2 {
+			t.Errorf("expected 2 tries, got %d", tries)
 		}
-		return errTest
+		if err != nil {
+			t.Errorf("expected nil error, got %v", err)
+		}
 	})
-	if tries != 2 {
-		t.Errorf("expected 2 tries, got %d", tries)
-	}
-	if err != nil {
-		t.Errorf("expected nil error, got %v", err)
-	}
+	t.Run("r.RunContext", func(t *testing.T) {
+		tries := 0
+		retrier := NewRetrier(5, 50, 50)
+		err := retrier.RunContext(context.Background(), func(ctx context.Context) error {
+			tries++
+			if tries == 2 {
+				return nil
+			}
+			return errTest
+		})
+		if tries != 2 {
+			t.Errorf("expected 2 tries, got %d", tries)
+		}
+		if err != nil {
+			t.Errorf("expected nil error, got %v", err)
+		}
+	})
 }
 
-func TestDoWithContextExitsEarlyWhenContextCanceled(t *testing.T) {
+func TestRunContextExitsEarlyWhenContextCanceled(t *testing.T) {
 	var err error
 	var wg sync.WaitGroup
 	tries := 0
@@ -85,18 +127,48 @@ func TestDoWithContextExitsEarlyWhenContextCanceled(t *testing.T) {
 }
 
 func TestStopStopsImmediately(t *testing.T) {
-	tries := 0
-	retrier := NewRetrier(5, 50, 50)
-	err := retrier.Run(func() error {
-		tries++
-		return Stop(errTest)
-	})
+	t.Run("r.Run", func(t *testing.T) {
+		tries := 0
+		retrier := NewRetrier(5, 50, 50)
+		err := retrier.Run(func() error {
+			tries++
+			return Stop(errTest)
+		})
 
-	if tries != 1 {
-		t.Errorf("expected 1 tries, got %d", tries)
+		if tries != 1 {
+			t.Errorf("expected 1 tries, got %d", tries)
+		}
+		if err != errTest {
+			t.Errorf("err should equal errTest, got: %v", err)
+		}
+	})
+	t.Run("r.RunContext", func(t *testing.T) {
+		tries := 0
+		retrier := NewRetrier(5, 50, 50)
+		err := retrier.RunContext(context.Background(), func(ctx context.Context) error {
+			tries++
+			return Stop(errTest)
+		})
+
+		if tries != 1 {
+			t.Errorf("expected 1 tries, got %d", tries)
+		}
+		if err != errTest {
+			t.Errorf("err should equal errTest, got: %v", err)
+		}
+	})
+}
+
+func TestRetrierGetsDefaultsIfLessThanZero(t *testing.T) {
+	r := NewRetrier(-1, -1, -1)
+	if r.maxTries != DefaultMaxTries {
+		t.Errorf("expected maxTries to be %d, got %d", DefaultMaxTries, r.maxTries)
 	}
-	if err != errTest {
-		t.Errorf("err should equal errTest, got: %v", err)
+	if r.initialDelay != DefaultInitialDelayMS {
+		t.Errorf("expected initialDelay to be %d, got %d", DefaultInitialDelayMS, r.initialDelay)
+	}
+	if r.maxDelay != DefaultMaxDelayMS {
+		t.Errorf("expected maxDelay to be %d, got %d", DefaultMaxDelayMS, r.maxDelay)
 	}
 }
 
