@@ -100,10 +100,6 @@ func min(a, b time.Duration) time.Duration {
 	return a
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 // FinalError represents and error that we don't wish to retry from. If the
 // wrapped function emits one of these, it will cease retrying, but will return
 // the original error.
