@@ -15,7 +15,8 @@ const (
 )
 
 // Retrier retries code blocks with or without context using an exponential
-// backoff algorithm with jitter
+// backoff algorithm with jitter. It is intended to be used as a retry policy,
+// which means it is safe to create and use concurrently.
 type Retrier struct {
 	maxTries     int
 	initialDelay int

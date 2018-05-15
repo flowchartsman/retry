@@ -3,7 +3,7 @@
 
 **retry** is a simple retrier for golang with exponential backoff and context support.
 
-It exists mainly because I found the other libraries either too heavy in implementation or too tedious to use. **retry** is simple and opinionated; it retries your code with an expoential backoff and it lets you bail early. It does not implement constant backoff or any alternative jitter schemes.
+It exists mainly because I found the other libraries either too heavy in implementation or too tedious to use. **retry** is simple and opinionated; it retries your code with an expoential backoff and it lets you bail early. It does not implement constant backoff or any alternative jitter schemes. Retrier objects are intended to be re-used, which means you define them once and then run functions with them whenever you want, as many times as you want. It is safe for concurrent use.
 
 If you're mostly doing HTTP work and you are comfortable with the requirements of converting everything to *io.ReadSeeker*, I highly recommend [hashicorp/go-retryablehttp](https://github.com/hashicorp/go-retryablehttp) (which I didn't use because I didn't want to cache my large POSTs) or [facebookgo/httpcontrol](https://github.com/facebookgo/httpcontrol) (which I didn't use because it only retries GETs).
 
