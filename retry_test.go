@@ -100,7 +100,7 @@ func TestStopStopsImmediately(t *testing.T) {
 	}
 }
 
-func ExampleRun() {
+func ExampleRetrier_Run() {
 	retrier := NewRetrier(5, 50, 50)
 	err := retrier.Run(func() error {
 		resp, err := http.Get("http://golang.org")
@@ -117,7 +117,7 @@ func ExampleRun() {
 	fmt.Println(err)
 }
 
-func ExampleDoWithContext_output() {
+func ExampleRetrier_RunContext_output() {
 	retrier := NewRetrier(5, 50, 50)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
