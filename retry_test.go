@@ -18,29 +18,28 @@ func TestBackoffBacksOff(t *testing.T) {
 	tries := 0
 	start := time.Now()
 	var last time.Time
-	err := Do(ConstantBackoff(5, 50*time.Millisecond), func() error {
+	retrier := NewRetrier(5, 50, 50)
+	err := retrier.Run(func() error {
 		tries++
 		last = time.Now()
 		return errTest
 	})
 
-	if tries != 4 {
-		t.Errorf("expected 4 tries, got %d", tries)
+	if tries != 5 {
+		t.Errorf("expected 5 tries, got %d", tries)
 	}
 	if err != errTest {
 		t.Errorf("err should equal errTest, got: %v", err)
 	}
-	if last.Sub(start) > 200*time.Millisecond {
-		t.Errorf("should have taken less than 200 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
-	}
-	if last.Sub(start) < 150*time.Millisecond {
-		t.Errorf("should have taken at least 150 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
+	if last.Sub(start) > 250*time.Millisecond {
+		t.Errorf("should have taken less than 250 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
 	}
 }
 
 func TestEventualSuccessSucceedsTransparently(t *testing.T) {
 	tries := 0
-	err := Do(ConstantBackoff(5, 50*time.Millisecond), func() error {
+	retrier := NewRetrier(5, 50, 50)
+	err := retrier.Run(func() error {
 		tries++
 		if tries == 2 {
 			return nil
@@ -60,10 +59,11 @@ func TestDoWithContextExitsEarlyWhenContextCanceled(t *testing.T) {
 	var wg sync.WaitGroup
 	tries := 0
 	ctx, canceler := context.WithCancel(context.Background())
+	retrier := NewRetrier(5, 50, 50)
 
 	wg.Add(1)
 	go func() {
-		err = DoWithContext(ctx, ConstantBackoff(100, 100*time.Millisecond), func(ctx context.Context) error {
+		err = retrier.RunContext(ctx, func(ctx context.Context) error {
 			tries++
 			return errTest
 		})
@@ -86,7 +86,8 @@ func TestDoWithContextExitsEarlyWhenContextCanceled(t *testing.T) {
 
 func TestStopStopsImmediately(t *testing.T) {
 	tries := 0
-	err := Do(ConstantBackoff(5, 50*time.Millisecond), func() error {
+	retrier := NewRetrier(5, 50, 50)
+	err := retrier.Run(func() error {
 		tries++
 		return Stop(errTest)
 	})
@@ -99,8 +100,9 @@ func TestStopStopsImmediately(t *testing.T) {
 	}
 }
 
-func ExampleDo() {
-	err := Do(ExponentialBackoff(5, 100*time.Millisecond, 1*time.Second), func() error {
+func ExampleRun() {
+	retrier := NewRetrier(5, 50, 50)
+	err := retrier.Run(func() error {
 		resp, err := http.Get("http://golang.org")
 		switch {
 		case err != nil:
@@ -116,9 +118,11 @@ func ExampleDo() {
 }
 
 func ExampleDoWithContext_output() {
+	retrier := NewRetrier(5, 50, 50)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
-	err := DoWithContext(ctx, ConstantBackoff(5, 100*time.Millisecond), func(ctx context.Context) error {
+
+	err := retrier.RunContext(ctx, func(ctx context.Context) error {
 		req, _ := http.NewRequest("GET", "http://golang.org/notfastenough", nil)
 		req = req.WithContext(ctx)
 		resp, err := http.DefaultClient.Do(req)

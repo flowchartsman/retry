@@ -7,46 +7,93 @@ import (
 	"time"
 )
 
-// Do runs a function until the BackoffStrategy is exhausted or the function
-// returns nil
-func Do(backoff BackoffStrategy, funcToRetry func() error) (err error) {
+// Default backoff
+const (
+	DefaultMaxTries        = 5
+	DefaultlInitialDelayMS = 200
+	DefaultMaxDelayMS      = 1000
+)
+
+// Retrier retries code blocks with or without context using an exponential
+// backoff algorithm with jitter
+type Retrier struct {
+	maxTries     int
+	initialDelay int
+	maxDelay     int
+}
+
+// NewRetrier returns a retrier for retrying functions with expoential backoff.
+// If any of the values are <= 0, they will be set to their respective defaults.
+func NewRetrier(maxTries, initialDelay, maxDelay int) *Retrier {
+	if maxTries <= 0 {
+		maxTries = DefaultMaxTries
+	}
+	if initialDelay <= 0 {
+		initialDelay = DefaultlInitialDelayMS
+	}
+	if maxDelay <= 0 {
+		maxDelay = DefaultMaxDelayMS
+	}
+	return &Retrier{maxTries, initialDelay, maxDelay}
+}
+
+// Run runs a function until it returns nil, until it returns a terminal error,
+// or until it has failed the maximum set number of iterations
+func (r *Retrier) Run(funcToRetry func() error) error {
+	attempts := 0
 	for {
+		// Attempt to run the function
 		err := funcToRetry()
+		// If there's no error, we're done!
 		if err == nil {
 			return nil
 		}
-		switch v := err.(type) {
-		case FinalError:
-			return v.e
-		}
-		nextDuration, toContinue := backoff()
-		if !toContinue {
+
+		attempts++
+		// If we've just run our last attempt, return the error we got
+		if attempts == r.maxTries {
 			return err
 		}
-		time.Sleep(nextDuration)
+
+		// Check if the error is a terminal error. If so, stop!
+		switch v := err.(type) {
+		case TerminalError:
+			return v.e
+		}
+		// Otherwise wait for the next duration
+		time.Sleep(getnextBackoff(attempts, r.initialDelay, r.maxDelay))
 	}
 }
 
-// DoWithContext runs a function until the BackoffStrategy is exhausted, until
-// the context is done, or until the function returns nil. Please note: it is
-// the responsibility of the called function to ensure context is obeyed if it
-// is to exit in a timely manner once the context is done.
-func DoWithContext(ctx context.Context, backoff BackoffStrategy, funcToRetry func(ctx context.Context) error) (err error) {
+// RunContext runs a function until it returns nil, until it returns a terminal
+// error, until its context is done, or until it has faile the maximum set
+// number of iterations
+func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Context) error) error {
+	attempts := 0
 	for {
+		// Attempt to run the function
 		err := funcToRetry(ctx)
+		// If there's no error, we're done!
 		if err == nil {
 			return nil
 		}
-		switch v := err.(type) {
-		case FinalError:
-			return v.e
-		}
-		nextDuration, toContinue := backoff()
-		if !toContinue {
+
+		attempts++
+		// If we've just run our last attempt, return the error we got
+		if attempts == r.maxTries {
 			return err
 		}
+
+		// Check if the error is a terminal error. If so, stop!
+		switch v := err.(type) {
+		case TerminalError:
+			return v.e
+		}
+		// Otherwise wait for the next duration or until the context is done,
+		// whichever comes first
 		select {
-		case <-time.NewTimer(nextDuration).C:
+		case <-time.NewTimer(getnextBackoff(attempts, r.initialDelay, r.maxDelay)).C:
+			// duration elapsed, loop
 		case <-ctx.Done():
 			// context cancelled, return the last error we got
 			return err
@@ -54,43 +101,27 @@ func DoWithContext(ctx context.Context, backoff BackoffStrategy, funcToRetry fun
 	}
 }
 
-// BackoffStrategy represents a function that returns successive wait durations
-// and a bool representing whether or not to continue
-type BackoffStrategy func() (time.Duration, bool)
-
-// ConstantBackoff always returns the same duration until maxAttempts - 1 is
-// reached
-func ConstantBackoff(maxAttempts int, delay time.Duration) BackoffStrategy {
-	attempts := 0
-	return func() (time.Duration, bool) {
-		attempts++
-		return delay, attempts < maxAttempts-1
-	}
+// Stop signals retry that the error we are returning is a terminal error, which
+// means we no longer wish to continue retrying the code
+func Stop(err error) TerminalError {
+	return TerminalError{err}
 }
 
-// ExponentialBackoff implements the exponential backoff algorithm to gradually
-// increase backoff time with jitter until maxAttempts -1 is reached.
-//
-// https://en.wikipedia.org/wiki/Exponential_backoff
-// https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
-func ExponentialBackoff(maxAttempts int, initialDelay time.Duration, maxDelay time.Duration) BackoffStrategy {
-	if initialDelay <= 0 {
-		panic("ExponentialBackoff requires positive duration")
-	}
-	attempts := 0
-	return func() (time.Duration, bool) {
-		attempts++
-		return min(
-			maxDelay,
-			time.Duration(randInt63n((1 << uint((attempts - 1)) * int64(initialDelay)))),
-		), attempts < maxAttempts-1
-	}
+// TerminalError represents and error that we don't wish to retry from.
+type TerminalError struct {
+	e error
 }
 
-// Stop signals retry that the error returned is not one we wish to retry, and
-// the retrier will immediately stop
-func Stop(err error) FinalError {
-	return FinalError{err}
+// Error implements error
+func (t TerminalError) Error() string {
+	return t.e.Error()
+}
+
+func getnextBackoff(attempts, initialDelay, maxDelay int) time.Duration {
+	return min(
+		time.Duration(maxDelay)*time.Millisecond,
+		time.Duration(randInt63n(int64(initialDelay)*(1<<uint(attempts))))*time.Millisecond,
+	)
 }
 
 func min(a, b time.Duration) time.Duration {
@@ -98,18 +129,6 @@ func min(a, b time.Duration) time.Duration {
 		return b
 	}
 	return a
-}
-
-// FinalError represents and error that we don't wish to retry from. If the
-// wrapped function emits one of these, it will cease retrying, but will return
-// the original error.
-type FinalError struct {
-	e error
-}
-
-// Error implements error
-func (f FinalError) Error() string {
-	return f.e.Error()
 }
 
 var (
