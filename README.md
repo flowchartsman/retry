@@ -21,7 +21,7 @@ err := retrier.Run(func() error {
     resp, err := http.Get("http://golang.org")
     switch {
     case err != nil:
-        // request error : return it
+        // request error - return it
         return err
     case resp.StatusCode == 0 || resp.StatusCode >= 500:
         // retryable StatusCode - return it
