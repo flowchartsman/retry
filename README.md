@@ -65,15 +65,6 @@ if err != nil {
 
 # Alternatives
 
-If you're doing HTTP work there are some good alternatives out there that add a layer on top of the standard libraries as well as providing special logic to help you automatically determine whether or not to retry a request.
-
-- [hashicorp/go-retryablehttp](https://github.com/hashicorp/go-retryablehttp)
-  - A very good library, but it requires conversion of all `io.Reader`s to `io.ReadSeeker`s, and one of my use-cases didn't allow for unconstrained cacheing of `POST` bodies.
-- [facebookgo/httpcontrol](https://github.com/facebookgo/httpcontrol)
-  - A great fully-featured transport. Only retries `GET`s, though :(
-- [sethgrid/pester](https://github.com/sethgrid/pester)
-  - Another good client, but had more options than I needed and also caches request bodies transparently.
-
 Some of the other libs I considered:
 - [jpillora/backoff](https://github.com/jpillora/backoff)
   - A little more bare bones than I wanted and no builtin concurrency safety. No context support.
@@ -85,6 +76,15 @@ Some of the other libs I considered:
   - Of the alternatives, I like this one the most, but I found the slice of `time.Duration` odd
   - No context support
   - Classifier pattern is not a bad idea, but it really comes down to "do I want to retry or stop?" and I thought it would be more flexible to simply allow the user to implement this logic how they saw fit. I could be open to changing my mind, if the solution is right. PRs welcome ;)
+
+If you're doing HTTP work there are some good alternatives out there that add a layer on top of the standard libraries as well as providing special logic to help you automatically determine whether or not to retry a request.
+
+- [hashicorp/go-retryablehttp](https://github.com/hashicorp/go-retryablehttp)
+  - A very good library, but it requires conversion of all `io.Reader`s to `io.ReadSeeker`s, and one of my use-cases didn't allow for unconstrained cacheing of `POST` bodies.
+- [facebookgo/httpcontrol](https://github.com/facebookgo/httpcontrol)
+  - A great fully-featured transport. Only retries `GET`s, though :(
+- [sethgrid/pester](https://github.com/sethgrid/pester)
+  - Another good client, but had more options than I needed and also caches request bodies transparently.
 
 # Reference
 
