@@ -81,6 +81,10 @@ Some of the other libs I considered:
   - A good library, but has some issues with context deadlines/timeouts. Can't "share" backup strategies / not thread-safe.
 - [gopkg.in/retry.v1](https://gopkg.in/retry.v1)
   - Iterator-based and a little awkward for me to use personally. I preferred to abstract the loop away.
+- [eapache/go-resiliency/retrier](https://godoc.org/github.com/eapache/go-resiliency/retrier)
+  - Of the alternatives, I like this one the most, but I found the slice of `time.Duration` odd
+  - No context support
+  - Classifier pattern is not a bad idea, but it really comes down to "do I want to retry or stop?" and I thought it would be more flexible to simply allow the user to implement this logic how they saw fit. I could be open to changing my mind, if the solution is right. PRs welcome ;)
 
 # Reference
 
