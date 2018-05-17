@@ -21,10 +21,13 @@ err := retrier.Run(func() error {
     resp, err := http.Get("http://golang.org")
     switch {
     case err != nil:
+        // request error : return it
         return err
     case resp.StatusCode == 0 || resp.StatusCode >= 500:
+        // retryable StatusCode - return it
         return fmt.Errorf("Retryable HTTP status: %s", http.StatusText(resp.StatusCode))
     case resp.StatusCode != 200:
+        // non-retryable error - stop now
         return retry.Stop(fmt.Errorf("Non-retryable HTTP status: %s", http.StatusText(resp.StatusCode)))
     }
     return nil
