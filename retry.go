@@ -58,7 +58,7 @@ func (r *Retrier) Run(funcToRetry func() error) error {
 
 		// Check if the error is a terminal error. If so, stop!
 		switch v := err.(type) {
-		case TerminalError:
+		case terminalError:
 			return v.e
 		}
 		// Otherwise wait for the next duration
@@ -87,7 +87,7 @@ func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Conte
 
 		// Check if the error is a terminal error. If so, stop!
 		switch v := err.(type) {
-		case TerminalError:
+		case terminalError:
 			return v.e
 		}
 		// Otherwise wait for the next duration or until the context is done,
@@ -104,17 +104,17 @@ func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Conte
 
 // Stop signals retry that the error we are returning is a terminal error, which
 // means we no longer wish to continue retrying the code
-func Stop(err error) TerminalError {
-	return TerminalError{err}
+func Stop(err error) error {
+	return terminalError{err}
 }
 
-// TerminalError represents and error that we don't wish to retry from.
-type TerminalError struct {
+// terminalError represents and error that we don't wish to retry from.
+type terminalError struct {
 	e error
 }
 
 // Error implements error
-func (t TerminalError) Error() string {
+func (t terminalError) Error() string {
 	return t.e.Error()
 }
 

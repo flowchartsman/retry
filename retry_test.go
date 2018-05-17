@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -172,11 +173,32 @@ func TestRetrierGetsDefaultsIfLessThanZero(t *testing.T) {
 	}
 }
 
-func TestFatalErrorImplementsError(t *testing.T) {
+func TestTerminalErrorImplementsError(t *testing.T) {
 	testError := fmt.Errorf("EG 8=D")
 	fatalError := Stop(testError)
 	if fatalError.Error() != testError.Error() {
 		t.Errorf("expected fatalError.Error() to be %s, got %s", testError.Error(), fatalError.Error())
+	}
+}
+
+type myErrorType struct{}
+
+func (m myErrorType) Error() string { return "myErrorType" }
+
+func TestTerminalErrorRetainsOriginalError(t *testing.T) {
+	retrier := NewRetrier(5, 50, 50)
+	tries := 0
+	err := retrier.Run(func() error {
+		tries++
+		return Stop(myErrorType{})
+	})
+
+	if tries != 1 {
+		t.Errorf("expected 1 tries, got %d", tries)
+	}
+	errType := reflect.TypeOf(err).String()
+	if errType != "retry.myErrorType" {
+		t.Errorf("expected retry.myErrorType, got %s", errType)
 	}
 }
 
