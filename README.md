@@ -5,7 +5,7 @@
 
 It exists mainly because I found the other libraries either too heavy in implementation or not to my liking.
 
-**retry** is simple and opinionated; it re-runs your code with a [particular](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/) ("full jitter") exponential backoff implementation, it supports context, and it lets you bail early on non-retryable errors. It does not implement constant backoff or alternative jitter schemes.
+**retry** is simple and opinionated; it re-runs your code with a [particular](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/) ("full jitter") (exponential backoff)[https://en.wikipedia.org/wiki/Exponential_backoff] implementation, it supports context, and it lets you bail early on non-retryable errors. It does not implement constant backoff or alternative jitter schemes.
 
 Retrier objects are intended to be re-used, which means you define them once and then run functions with them whenever you want, as many times as you want. This is safe for concurrent use.
 
