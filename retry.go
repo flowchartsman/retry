@@ -67,8 +67,12 @@ func (r *Retrier) Run(funcToRetry func() error) error {
 }
 
 // RunContext runs a function until it returns nil, until it returns a terminal
-// error, until its context is done, or until it has faile the maximum set
-// number of iterations
+// error, until its context is done, or until it has failed the maximum set
+// number of iterations.
+//
+// Note: it is the responsibility of the called function to do its part in
+// honoring context deadlines. retry has no special magic around this, and will
+// simply stop the retry loop when the function returns if the context is done.
 func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Context) error) error {
 	attempts := 0
 	for {
