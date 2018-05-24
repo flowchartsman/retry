@@ -15,7 +15,7 @@ Retrier objects are intended to be re-used, which means you define them once and
 ```go
 // create a new retrier that will try a maximum of five times, with
 // an initial delay of 100 ms and a maximum delay of 1 second
-retrier := retry.NewRetrier(5, 100, 1000)
+retrier := retry.NewRetrier(5, 100 * time.Millisecond, time.Second)
 
 err := retrier.Run(func() error {
     resp, err := http.Get("http://golang.org")
@@ -41,7 +41,7 @@ if err != nil {
 ```go
 // create a new retrier that will try a maximum of five times, with
 // an initial delay of 100 ms and a maximum delay of 1 second
-retrier := retry.NewRetrier(5, 100, 1000)
+retrier := retry.NewRetrier(5, 100 * time.Millisecond, time.Second)
 ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 defer cancel()
 
