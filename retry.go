@@ -9,9 +9,9 @@ import (
 
 // Default backoff
 const (
-	DefaultMaxTries       = 5
-	DefaultInitialDelayMS = 200
-	DefaultMaxDelayMS     = 1000
+	DefaultMaxTries     = 5
+	DefaultInitialDelay = time.Millisecond * 200
+	DefaultMaxDelay     = time.Millisecond * 1000
 )
 
 // Retrier retries code blocks with or without context using an exponential
@@ -19,21 +19,21 @@ const (
 // which means it is safe to create and use concurrently.
 type Retrier struct {
 	maxTries     int
-	initialDelay int
-	maxDelay     int
+	initialDelay time.Duration
+	maxDelay     time.Duration
 }
 
 // NewRetrier returns a retrier for retrying functions with expoential backoff.
 // If any of the values are <= 0, they will be set to their respective defaults.
-func NewRetrier(maxTries, initialDelay, maxDelay int) *Retrier {
+func NewRetrier(maxTries int, initialDelay, maxDelay time.Duration) *Retrier {
 	if maxTries <= 0 {
 		maxTries = DefaultMaxTries
 	}
 	if initialDelay <= 0 {
-		initialDelay = DefaultInitialDelayMS
+		initialDelay = DefaultInitialDelay
 	}
 	if maxDelay <= 0 {
-		maxDelay = DefaultMaxDelayMS
+		maxDelay = DefaultMaxDelay
 	}
 	return &Retrier{maxTries, initialDelay, maxDelay}
 }
@@ -122,10 +122,10 @@ func (t terminalError) Error() string {
 	return t.e.Error()
 }
 
-func getnextBackoff(attempts, initialDelay, maxDelay int) time.Duration {
+func getnextBackoff(attempts int, initialDelay, maxDelay time.Duration) time.Duration {
 	return min(
-		time.Duration(maxDelay)*time.Millisecond,
-		time.Duration(randInt63n(int64(initialDelay)*(1<<uint(attempts))))*time.Millisecond,
+		maxDelay,
+		time.Duration(randInt63n(int64(initialDelay)*(1<<uint(attempts)))),
 	)
 }
 

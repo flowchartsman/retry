@@ -20,7 +20,7 @@ func TestBackoffBacksOff(t *testing.T) {
 		tries := 0
 		start := time.Now()
 		var last time.Time
-		retrier := NewRetrier(5, 50, 50)
+		retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 		err := retrier.Run(func() error {
 			tries++
 			last = time.Now()
@@ -41,7 +41,7 @@ func TestBackoffBacksOff(t *testing.T) {
 		tries := 0
 		start := time.Now()
 		var last time.Time
-		retrier := NewRetrier(5, 50, 50)
+		retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 		err := retrier.RunContext(context.Background(), func(ctx context.Context) error {
 			tries++
 			last = time.Now()
@@ -63,7 +63,7 @@ func TestBackoffBacksOff(t *testing.T) {
 func TestEventualSuccessSucceedsTransparently(t *testing.T) {
 	t.Run("r.Run", func(t *testing.T) {
 		tries := 0
-		retrier := NewRetrier(5, 50, 50)
+		retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 		err := retrier.Run(func() error {
 			tries++
 			if tries == 2 {
@@ -80,7 +80,7 @@ func TestEventualSuccessSucceedsTransparently(t *testing.T) {
 	})
 	t.Run("r.RunContext", func(t *testing.T) {
 		tries := 0
-		retrier := NewRetrier(5, 50, 50)
+		retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 		err := retrier.RunContext(context.Background(), func(ctx context.Context) error {
 			tries++
 			if tries == 2 {
@@ -102,7 +102,7 @@ func TestRunContextExitsEarlyWhenContextCanceled(t *testing.T) {
 	var wg sync.WaitGroup
 	tries := 0
 	ctx, canceler := context.WithCancel(context.Background())
-	retrier := NewRetrier(5, 50, 50)
+	retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 
 	wg.Add(1)
 	go func() {
@@ -130,7 +130,7 @@ func TestRunContextExitsEarlyWhenContextCanceled(t *testing.T) {
 func TestStopStopsImmediately(t *testing.T) {
 	t.Run("r.Run", func(t *testing.T) {
 		tries := 0
-		retrier := NewRetrier(5, 50, 50)
+		retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 		err := retrier.Run(func() error {
 			tries++
 			return Stop(errTest)
@@ -145,7 +145,7 @@ func TestStopStopsImmediately(t *testing.T) {
 	})
 	t.Run("r.RunContext", func(t *testing.T) {
 		tries := 0
-		retrier := NewRetrier(5, 50, 50)
+		retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 		err := retrier.RunContext(context.Background(), func(ctx context.Context) error {
 			tries++
 			return Stop(errTest)
@@ -165,11 +165,11 @@ func TestRetrierGetsDefaultsIfLessThanZero(t *testing.T) {
 	if r.maxTries != DefaultMaxTries {
 		t.Errorf("expected maxTries to be %d, got %d", DefaultMaxTries, r.maxTries)
 	}
-	if r.initialDelay != DefaultInitialDelayMS {
-		t.Errorf("expected initialDelay to be %d, got %d", DefaultInitialDelayMS, r.initialDelay)
+	if r.initialDelay != DefaultInitialDelay {
+		t.Errorf("expected initialDelay to be %d, got %d", DefaultInitialDelay, r.initialDelay)
 	}
-	if r.maxDelay != DefaultMaxDelayMS {
-		t.Errorf("expected maxDelay to be %d, got %d", DefaultMaxDelayMS, r.maxDelay)
+	if r.maxDelay != DefaultMaxDelay {
+		t.Errorf("expected maxDelay to be %d, got %d", DefaultMaxDelay, r.maxDelay)
 	}
 }
 
@@ -186,7 +186,7 @@ type myErrorType struct{}
 func (m myErrorType) Error() string { return "myErrorType" }
 
 func TestTerminalErrorRetainsOriginalError(t *testing.T) {
-	retrier := NewRetrier(5, 50, 50)
+	retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 	tries := 0
 	err := retrier.Run(func() error {
 		tries++
@@ -203,7 +203,7 @@ func TestTerminalErrorRetainsOriginalError(t *testing.T) {
 }
 
 func ExampleRetrier_Run() {
-	retrier := NewRetrier(5, 50, 50)
+	retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 	err := retrier.Run(func() error {
 		resp, err := http.Get("http://golang.org")
 		switch {
@@ -220,7 +220,7 @@ func ExampleRetrier_Run() {
 }
 
 func ExampleRetrier_RunContext_output() {
-	retrier := NewRetrier(5, 50, 50)
+	retrier := NewRetrier(5, 50*time.Millisecond, 50*time.Millisecond)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
