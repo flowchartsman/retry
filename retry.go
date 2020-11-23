@@ -123,10 +123,31 @@ func (t terminalError) Error() string {
 }
 
 func getnextBackoff(attempts int, initialDelay, maxDelay time.Duration) time.Duration {
-	return min(
-		maxDelay,
-		time.Duration(randInt63n(int64(initialDelay)*(1<<uint(attempts)))),
-	)
+	// From the documentation of rand.Int63n (https://golang.org/src/math/rand/rand.go):
+	//
+	// 	Int63n returns, as an int64, a non-negative pseudo-random number in [0,n).
+	// 	It panics if n <= 0.
+	//
+	// I experienced this "invalid argument to Int63n" panic.
+	// It appears that given my initial conditions (initialDelay = 500 * time.Millisecond
+	// that "backoff" becomes negative on the 35th iteration, which leads to this panic.
+	// Admittedly, 35 retries seems excessive, but that's outside of this module's
+	// domain since the caller is responsible for setting the max retries, the library
+	// shouldn't crash before it gets there!
+	//
+	backoff := int64(initialDelay)*(1<<uint(attempts))
+
+	if backoff == 0 {
+		// This will happen the first iteration if the caller sets an initialDelay of 0.
+		backoff = int64(maxDelay)
+	} else if backoff < 0 {
+		// this happens when the computation of "backoff" above results in a negative
+		// value. Depending on "initialDelay", this can happen after potentially very
+		// few attempts
+		backoff = int64(maxDelay)
+	}
+
+	return min(maxDelay, time.Duration(randInt63n(backoff)))
 }
 
 func min(a, b time.Duration) time.Duration {

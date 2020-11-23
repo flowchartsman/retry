@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"log"
 )
 
 var (
@@ -239,4 +240,37 @@ func ExampleRetrier_RunContext_output() {
 	})
 	fmt.Println(err)
 	// Output: Get http://golang.org/notfastenough: context deadline exceeded
+}
+
+// From the documentation of rand.Int63n (https://golang.org/src/math/rand/rand.go):
+//
+// 	Int63n returns, as an int64, a non-negative pseudo-random number in [0,n).
+// 	It panics if n <= 0.
+//
+// I experienced this "invalid argument to Int63n" panic.
+// with initial conditions (initialDelay = 500 * time.Millisecond)
+// after the 35th retry.
+// This verifies the fix
+func TestBackoff(t *testing.T) {
+	initialDelay := 500 * time.Millisecond
+	maxDelay := 1 * time.Millisecond
+	maxTries := 10000000 // a really big number
+
+	attempts := 0
+	operation := func(c context.Context) error {
+		attempts++
+
+		if attempts > 40 {
+			return nil
+		}
+		log.Printf("TestBackoff: attempt %d", attempts)
+
+		return fmt.Errorf("try again %d", attempts)
+	}
+
+	retrier := NewRetrier(maxTries, initialDelay, maxDelay)
+	err := retrier.RunContext(context.Background(), operation)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
 }
