@@ -9,7 +9,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"log"
 )
 
 var (
@@ -34,8 +33,10 @@ func TestBackoffBacksOff(t *testing.T) {
 		if err != errTest {
 			t.Errorf("err should equal errTest, got: %v", err)
 		}
-		if last.Sub(start) > 250*time.Millisecond {
-			t.Errorf("should have taken less than 250 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
+
+		max := 5*(50+50)*time.Millisecond
+		if last.Sub(start) > max {
+			t.Errorf("should have taken less than %v, took %d", max, last.Sub(start).Nanoseconds()/1000000)
 		}
 	})
 	t.Run("r.RunContext", func(t *testing.T) {
@@ -55,8 +56,9 @@ func TestBackoffBacksOff(t *testing.T) {
 		if err != errTest {
 			t.Errorf("err should equal errTest, got: %v", err)
 		}
-		if last.Sub(start) > 250*time.Millisecond {
-			t.Errorf("should have taken less than 250 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
+		max := 5*(50+50)*time.Millisecond
+		if last.Sub(start) > max {
+			t.Errorf("should have taken less than %v, took %d", max, last.Sub(start).Nanoseconds()/1000000)
 		}
 	})
 }
@@ -242,35 +244,24 @@ func ExampleRetrier_RunContext_output() {
 	// Output: Get http://golang.org/notfastenough: context deadline exceeded
 }
 
-// From the documentation of rand.Int63n (https://golang.org/src/math/rand/rand.go):
+
+func backoffPanicCheck(t *testing.T) {
+	r := recover()
+	if r != nil {
+		t.Errorf("expected no panic, got panic %v", r)
+	}
+}
 //
-// 	Int63n returns, as an int64, a non-negative pseudo-random number in [0,n).
-// 	It panics if n <= 0.
+// This test validates that the panic reported in https://github.com/flowchartsman/retry/issues/4 has been fixed
 //
-// I experienced this "invalid argument to Int63n" panic.
-// with initial conditions (initialDelay = 500 * time.Millisecond)
-// after the 35th retry.
-// This verifies the fix
-func TestBackoff(t *testing.T) {
+//
+func TestBackoffPanicFix(t *testing.T) {
+	defer backoffPanicCheck(t)
+
 	initialDelay := 500 * time.Millisecond
 	maxDelay := 1 * time.Millisecond
-	maxTries := 10000000 // a really big number
 
-	attempts := 0
-	operation := func(c context.Context) error {
-		attempts++
-
-		if attempts > 40 {
-			return nil
-		}
-		log.Printf("TestBackoff: attempt %d", attempts)
-
-		return fmt.Errorf("try again %d", attempts)
-	}
-
-	retrier := NewRetrier(maxTries, initialDelay, maxDelay)
-	err := retrier.RunContext(context.Background(), operation)
-	if err != nil {
-		t.Errorf("%v", err)
+	for attempts := 0; attempts < 100; attempts++ {
+		_ = getnextBackoff(attempts, initialDelay, maxDelay)
 	}
 }
