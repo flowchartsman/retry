@@ -137,12 +137,11 @@ func getnextBackoff(attempts int, initialDelay, maxDelay time.Duration) time.Dur
 		backoff = jitterDuration(maxDelay / 2)
 	}
 	return backoff + initialDelay
-//	return backoff
 }
 
 func jitterDuration(duration time.Duration) time.Duration {
-        randMux.Lock()
-        defer randMux.Unlock()
+	randMux.Lock()
+	defer randMux.Unlock()
 
 	return time.Duration(randSource.Int63n(int64(duration)) + int64(duration))
 }
