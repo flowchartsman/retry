@@ -42,29 +42,9 @@ func NewRetrier(maxTries int, initialDelay, maxDelay time.Duration) *Retrier {
 // Run runs a function until it returns nil, until it returns a terminal error,
 // or until it has failed the maximum set number of iterations
 func (r *Retrier) Run(funcToRetry func() error) error {
-	attempts := 0
-	for {
-		// Attempt to run the function
-		err := funcToRetry()
-		// If there's no error, we're done!
-		if err == nil {
-			return nil
-		}
-
-		attempts++
-		// If we've just run our last attempt, return the error we got
-		if attempts == r.maxTries {
-			return err
-		}
-
-		// Check if the error is a terminal error. If so, stop!
-		switch v := err.(type) {
-		case terminalError:
-			return v.e
-		}
-		// Otherwise wait for the next duration
-		time.Sleep(getnextBackoff(attempts, r.initialDelay, r.maxDelay))
-	}
+	return r.RunContext(context.Background(), func(_ context.Context) error {
+		return funcToRetry()
+	})
 }
 
 // RunContext runs a function until it returns nil, until it returns a terminal
