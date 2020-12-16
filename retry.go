@@ -4,7 +4,6 @@ import (
 	"context"
 	"math"
 	"math/rand"
-	"sync"
 	"time"
 )
 
@@ -67,6 +66,7 @@ func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Conte
 	if maxDelay <= 0 {
 		maxDelay = DefaultMaxDelay
 	}
+	randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
 	attempts := 0
 	for {
 		// Attempt to run the function
@@ -90,7 +90,7 @@ func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Conte
 		// Otherwise wait for the next duration or until the context is done,
 		// whichever comes first
 		select {
-		case <-time.NewTimer(getnextBackoff(attempts, initialDelay, maxDelay)).C:
+		case <-time.NewTimer(getnextBackoff(attempts, initialDelay, maxDelay, randSource)).C:
 			// duration elapsed, loop
 		case <-ctx.Done():
 			// context cancelled, return the last error we got
@@ -115,36 +115,22 @@ func (t terminalError) Error() string {
 	return t.e.Error()
 }
 
-func getnextBackoff(attempts int, initialDelay, maxDelay time.Duration) time.Duration {
+func getnextBackoff(attempts int, initialDelay, maxDelay time.Duration, randSource *rand.Rand) time.Duration {
 	var backoff time.Duration
 
 	// this complexity is to limit the backoff to values that fit into signed 64 bit numbers
 	attemptsLimit := int(math.Log2(float64(initialDelay))) + 1
 	if attemptsLimit < 63-attempts {
-		backoff = time.Duration(1<<uint64(attempts)) * jitterDuration(initialDelay)
+		backoff = time.Duration(1<<uint64(attempts)) * jitterDuration(initialDelay, randSource)
 		if backoff > maxDelay {
-			backoff = jitterDuration(maxDelay / 2)
+			backoff = jitterDuration(maxDelay/2, randSource)
 		}
 	} else {
-		backoff = jitterDuration(maxDelay / 2)
+		backoff = jitterDuration(maxDelay/2, randSource)
 	}
 	return backoff + initialDelay
 }
 
-func jitterDuration(duration time.Duration) time.Duration {
-	randMux.Lock()
-	defer randMux.Unlock()
-
+func jitterDuration(duration time.Duration, randSource *rand.Rand) time.Duration {
 	return time.Duration(randSource.Int63n(int64(duration)) + int64(duration))
-}
-
-var (
-	randSource = rand.New(rand.NewSource(time.Now().UnixNano()))
-	randMux    sync.Mutex
-)
-
-func randInt63n(i int64) int64 {
-	randMux.Lock()
-	defer randMux.Unlock()
-	return randSource.Int63n(i)
 }

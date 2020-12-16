@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"reflect"
 	"sync"
@@ -255,9 +256,10 @@ func TestBackoffPanicFix(t *testing.T) {
 
 	initialDelay := 500 * time.Millisecond
 	maxDelay := 1 * time.Millisecond
+	randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	for attempts := 0; attempts < 100; attempts++ {
-		_ = getnextBackoff(attempts, initialDelay, maxDelay)
+		_ = getnextBackoff(attempts, initialDelay, maxDelay, randSource)
 	}
 }
 
