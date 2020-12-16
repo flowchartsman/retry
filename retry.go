@@ -2,6 +2,7 @@ package retry
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -123,17 +124,26 @@ func (t terminalError) Error() string {
 }
 
 func getnextBackoff(attempts int, initialDelay, maxDelay time.Duration) time.Duration {
-	return min(
-		maxDelay,
-		time.Duration(randInt63n(int64(initialDelay)*(1<<uint(attempts)))),
-	)
+	var backoff time.Duration
+
+	// this complexity is to limit the backoff to values that fit into signed 64 bit numbers
+	attemptsLimit := int(math.Log2(float64(initialDelay))) + 1
+	if attemptsLimit < 63-attempts {
+		backoff = time.Duration(1<<uint64(attempts)) * jitterDuration(initialDelay)
+		if backoff > maxDelay {
+			backoff = jitterDuration(maxDelay / 2)
+		}
+	} else {
+		backoff = jitterDuration(maxDelay / 2)
+	}
+	return backoff + initialDelay
 }
 
-func min(a, b time.Duration) time.Duration {
-	if a > b {
-		return b
-	}
-	return a
+func jitterDuration(duration time.Duration) time.Duration {
+	randMux.Lock()
+	defer randMux.Unlock()
+
+	return time.Duration(randSource.Int63n(int64(duration)) + int64(duration))
 }
 
 var (

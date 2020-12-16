@@ -33,8 +33,10 @@ func TestBackoffBacksOff(t *testing.T) {
 		if err != errTest {
 			t.Errorf("err should equal errTest, got: %v", err)
 		}
-		if last.Sub(start) > 250*time.Millisecond {
-			t.Errorf("should have taken less than 250 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
+
+		max := 5 * (50 + 50) * time.Millisecond
+		if last.Sub(start) > max {
+			t.Errorf("should have taken less than %v, took %d", max, last.Sub(start).Nanoseconds()/1000000)
 		}
 	})
 	t.Run("r.RunContext", func(t *testing.T) {
@@ -54,8 +56,9 @@ func TestBackoffBacksOff(t *testing.T) {
 		if err != errTest {
 			t.Errorf("err should equal errTest, got: %v", err)
 		}
-		if last.Sub(start) > 250*time.Millisecond {
-			t.Errorf("should have taken less than 250 milliseconds, took %d", last.Sub(start).Nanoseconds()/1000000)
+		max := 5 * (50 + 50) * time.Millisecond
+		if last.Sub(start) > max {
+			t.Errorf("should have taken less than %v, took %d", max, last.Sub(start).Nanoseconds()/1000000)
 		}
 	})
 }
@@ -239,4 +242,23 @@ func ExampleRetrier_RunContext_output() {
 	})
 	fmt.Println(err)
 	// Output: Get http://golang.org/notfastenough: context deadline exceeded
+}
+
+func backoffPanicCheck(t *testing.T) {
+	r := recover()
+	if r != nil {
+		t.Errorf("expected no panic, got panic %v", r)
+	}
+}
+
+// This test validates that the panic reported in https://github.com/flowchartsman/retry/issues/4 has been fixed
+func TestBackoffPanicFix(t *testing.T) {
+	defer backoffPanicCheck(t)
+
+	initialDelay := 500 * time.Millisecond
+	maxDelay := 1 * time.Millisecond
+
+	for attempts := 0; attempts < 100; attempts++ {
+		_ = getnextBackoff(attempts, initialDelay, maxDelay)
+	}
 }
