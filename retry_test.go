@@ -241,7 +241,7 @@ func ExampleRetrier_RunContext_output() {
 		return nil
 	})
 	fmt.Println(err)
-	// Output: Get http://golang.org/notfastenough: context deadline exceeded
+	// Output: Get "http://golang.org/notfastenough": context deadline exceeded
 }
 
 func backoffPanicCheck(t *testing.T) {
