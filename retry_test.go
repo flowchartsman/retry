@@ -243,16 +243,13 @@ func ExampleRetrier_RunContext_output() {
 	// Output: Get "http://golang.org/notfastenough": context deadline exceeded
 }
 
-func backoffPanicCheck(t *testing.T) {
-	r := recover()
-	if r != nil {
-		t.Errorf("expected no panic, got panic %v", r)
-	}
-}
-
-// This test validates that the panic reported in https://github.com/flowchartsman/retry/issues/4 has been fixed
+// Ref: https://github.com/flowchartsman/retry/issues/4
 func TestBackoffPanicFix(t *testing.T) {
-	defer backoffPanicCheck(t)
+	defer func() {
+		if r := recover(); r != nil {
+			t.Error("Backoff underflows and panics")
+		}
+	}()
 
 	initialDelay := 500 * time.Millisecond
 	maxDelay := 1 * time.Millisecond
@@ -263,6 +260,7 @@ func TestBackoffPanicFix(t *testing.T) {
 	}
 }
 
+// Ref: https://github.com/flowchartsman/retry/issues/7
 func TestZeroValueRetrierDoesNotPanic(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
