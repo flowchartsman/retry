@@ -11,9 +11,7 @@ import (
 	"time"
 )
 
-var (
-	errTest = errors.New("test error")
-)
+var errTest = errors.New("test error")
 
 func TestBackoffBacksOff(t *testing.T) {
 	t.Run("r.Run", func(t *testing.T) {
@@ -261,4 +259,16 @@ func TestBackoffPanicFix(t *testing.T) {
 	for attempts := 0; attempts < 100; attempts++ {
 		_ = getnextBackoff(attempts, initialDelay, maxDelay)
 	}
+}
+
+func TestZeroValueRetrierDoesNotPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Error("Zero-value retrier panics when used")
+		}
+	}()
+	r := Retrier{}
+	r.Run(func() error {
+		return errors.New("nope")
+	})
 }

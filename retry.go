@@ -55,6 +55,18 @@ func (r *Retrier) Run(funcToRetry func() error) error {
 // honoring context deadlines. retry has no special magic around this, and will
 // simply stop the retry loop when the function returns if the context is done.
 func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Context) error) error {
+	maxTries := r.maxTries
+	initialDelay := r.initialDelay
+	maxDelay := r.maxDelay
+	if maxTries <= 0 {
+		maxTries = DefaultMaxTries
+	}
+	if initialDelay <= 0 {
+		initialDelay = DefaultInitialDelay
+	}
+	if maxDelay <= 0 {
+		maxDelay = DefaultMaxDelay
+	}
 	attempts := 0
 	for {
 		// Attempt to run the function
@@ -66,7 +78,7 @@ func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Conte
 
 		attempts++
 		// If we've just run our last attempt, return the error we got
-		if attempts == r.maxTries {
+		if attempts == maxTries {
 			return err
 		}
 
@@ -78,7 +90,7 @@ func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Conte
 		// Otherwise wait for the next duration or until the context is done,
 		// whichever comes first
 		select {
-		case <-time.NewTimer(getnextBackoff(attempts, r.initialDelay, r.maxDelay)).C:
+		case <-time.NewTimer(getnextBackoff(attempts, initialDelay, maxDelay)).C:
 			// duration elapsed, loop
 		case <-ctx.Done():
 			// context cancelled, return the last error we got
