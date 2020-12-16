@@ -264,13 +264,21 @@ func TestBackoffPanicFix(t *testing.T) {
 }
 
 func TestZeroValueRetrierDoesNotPanic(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			t.Error("Zero-value retrier panics when used")
 		}
 	}()
+	tries := 0
 	r := Retrier{}
 	r.Run(func() error {
+		tries++
+		if tries > 1 {
+			return Stop(errors.New("nope"))
+		}
 		return errors.New("nope")
 	})
 }
