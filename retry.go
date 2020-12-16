@@ -89,11 +89,16 @@ func (r *Retrier) RunContext(ctx context.Context, funcToRetry func(context.Conte
 		}
 		// Otherwise wait for the next duration or until the context is done,
 		// whichever comes first
+		t := time.NewTimer(getnextBackoff(attempts, initialDelay, maxDelay, randSource))
 		select {
-		case <-time.NewTimer(getnextBackoff(attempts, initialDelay, maxDelay, randSource)).C:
+		case <-t.C:
 			// duration elapsed, loop
 		case <-ctx.Done():
-			// context cancelled, return the last error we got
+			// context cancelled, kill the timer if it hasn't fired, and return
+			// the last error we got
+			if !t.Stop() {
+				<-t.C
+			}
 			return err
 		}
 	}
