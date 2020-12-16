@@ -1,4 +1,4 @@
-# retry [![GoDoc](https://godoc.org/github.com/flowchartsman/retry?status.svg)](https://godoc.org/github.com/flowchartsman/retry) [![Build Status](https://img.shields.io/travis/flowchartsman/retry.svg)](https://travis-ci.org/flowchartsman/retry) [![Go Report Card](https://goreportcard.com/badge/github.com/flowchartsman/retry)](https://goreportcard.com/report/github.com/flowchartsman/retry) [![Coverage Status](https://img.shields.io/coveralls/github/flowchartsman/retry.svg)](https://coveralls.io/github/flowchartsman/retry?branch=master)
+# retry [![GoDoc](https://godoc.org/github.com/flowchartsman/retry?status.svg)](https://godoc.org/github.com/flowchartsman/retry) [![Go Report Card](https://goreportcard.com/badge/github.com/flowchartsman/retry)](https://goreportcard.com/report/github.com/flowchartsman/retry) [![Coverage Status](https://img.shields.io/coveralls/github/flowchartsman/retry.svg)](https://coveralls.io/github/flowchartsman/retry?branch=master)
 `♻️¯\_ʕ◔ϖ◔ʔ_/¯`
 
 **retry** is a simple retrier for golang with exponential backoff and context support.
